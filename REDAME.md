@@ -3,7 +3,7 @@
 Šī ir interaktīva sistēma, kas izveidota Rīgas Pārdaugavas pamatskolas vajadzībām, lai atvieglotu iknedēļas dežūru grafika sastādīšanu.
 
 ## 🚀 Kā palaist programmu?
-Programma ir pieejama tiešsaistē: [SPIED ŠEIT, LAI ATVĒRTU](TAVA_GITHUB_PAGES_SAITE)
+Programma ir pieejama tiešsaistē: [SPIED ŠEIT, LAI ATVĒRTU]([TAVA_GITHUB_PAGES_SAITE](https://ilzite666.github.io/Skolas_dezuru_plans/))
 
 ## 📖 Lietošanas instrukcija
 1. **Datu automātika:** Sistēma automātiski seko līdzi, lai viens skolotājs netiktu ielikts divās vietās vienlaicīgi tajā pašā dienā.
