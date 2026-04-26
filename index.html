@@ -27,18 +27,10 @@
         .status { text-align: right; font-size: 0.75rem; color: #27ae60; font-weight: bold; margin-top: 5px; min-height: 15px; }
 
         @media print {
-            @page { size: landscape; margin: 0.5cm; }
             .no-print, .btn, .archive-section, .status { display: none !important; }
-            body { background: white; padding: 0; margin: 0; }
             .container { box-shadow: none; border: none; width: 100%; max-width: 100%; padding: 0; }
-            h1 { font-size: 1.4rem; margin-bottom: 2px; }
-            h2 { font-size: 1.1rem; margin-top: 0; }
-            table { font-size: 0.82rem; width: 100%; border-collapse: collapse; }
-            th, td { padding: 3px !important; border: 1px solid #333 !important; }
-            .teacher-select { border: none !important; appearance: none; -webkit-appearance: none; background: transparent; font-size: 0.82rem; text-align: center; width: 100%; color: black !important; opacity: 1 !important; }
-            .notes-section { margin-top: 8px; padding-top: 8px; font-size: 0.75rem; border-top: 1px solid #333; }
-            .save-note { font-size: 0.75rem; border: none !important; width: auto; }
-            input::placeholder { color: transparent; }
+            body { background: white; }
+            .teacher-select { border: none !important; appearance: none; background: transparent; }
         }
     </style>
 </head>
@@ -48,8 +40,8 @@
     <div class="header-inputs">
         <h1>Rīgas Pārdaugavas pamatskola</h1>
         <h2>Skolotāju dežūras 
-            <select id="year-select" onchange="updateAll()" style="width: 130px; font-size: 1.1rem;"></select> m.g. 
-            <select id="semester-select" onchange="updateAll()" style="font-size: 1.1rem;">
+            <select id="year-select" style="width: 130px; font-size: 1.1rem;"></select> m.g. 
+            <select id="semester-select" style="font-size: 1.1rem;">
                 <option>1. semestris</option>
                 <option>2. semestris</option>
             </select>
@@ -58,7 +50,7 @@
         <div class="controls no-print">
             <button onclick="window.print()" class="btn btn-print">🖨️ Drukāt</button>
             <button onclick="atvertSarakstu()" class="btn btn-edit">👥 Rediģēt skolotāju sarakstu</button>
-            <button onclick="iztiritPlanu()" class="btn btn-clear">🗑️ Notīrīt visu</button>
+            <button id="clear-all-btn" class="btn btn-clear">🗑️ Notīrīt visu</button>
             
             <div class="archive-section">
                 <span>Arhīvs:</span>
@@ -93,9 +85,9 @@
         <h3 style="color: #c0392b;">Pedagogu ievērībai!</h3>
         <ul style="list-style-type: disc; margin-left: 20px; line-height: 1.8;">
             <li>Dežūrējošais administrators novēro kārtību starpbrīžos pie ārdurvīm.</li>
-            <li>Pie mājturības kabinetiem: <input type="text" id="note-majture" class="save-note" oninput="updateAll()" placeholder="Ierakstiet skolotāju..."></li>
-            <li>Pie sporta zāles: <input type="text" id="note-sports" class="save-note" oninput="updateAll()" placeholder="Ierakstiet skolotājus..."></li>
-            <li>Kāpnes 3. un 4. stāvā: <input type="text" id="note-kapnes" class="save-note" oninput="updateAll()" placeholder="Vārdi un dienas..."></li>
+            <li>Pie mājturības kabinetiem: <input type="text" id="note-majture" class="save-note" placeholder="Ierakstiet skolotāju..."></li>
+            <li>Pie sporta zāles: <input type="text" id="note-sports" class="save-note" placeholder="Ierakstiet skolotājus..."></li>
+            <li>Kāpnes 3. un 4. stāvā: <input type="text" id="note-kapnes" class="save-note" placeholder="Vārdi un dienas..."></li>
         </ul>
     </div>
 </div>
@@ -103,7 +95,6 @@
 <script>
     let skolotaji = [];
     const dienas = ["Pirmdiena", "Otrdiena", "Trešdiena", "Ceturtdiena", "Piektdiena"];
-    let isChanged = false;
     const sheetId = '1sKwErMqhgxHtLbotl1JylTKaYKDnjPfWx-1TNdUaTnM';
 
     async function ieladetSkolotajus() {
@@ -125,7 +116,7 @@
     function init() {
         const yearSel = document.getElementById('year-select');
         const curYear = new Date().getFullYear();
-        yearSel.innerHTML = ""; // Nodrošina, ka saraksts nepieaug dubultā
+        yearSel.innerHTML = "";
         for(let i=-1; i<3; i++) {
             let y = curYear + i;
             let opt = document.createElement('option');
@@ -140,11 +131,25 @@
             const tr = document.createElement('tr');
             let cells = `<td><b>${diena}</b></td>`;
             for (let cIdx = 0; cIdx < 6; cIdx++) {
-                cells += `<td><select class="teacher-select" id="s-${rIdx}-${cIdx}" onchange="updateAll()"></select></td>`;
+                cells += `<td><select class="teacher-select" id="s-${rIdx}-${cIdx}"></select></td>`;
             }
             tr.innerHTML = cells;
             body.appendChild(tr);
         });
+
+        document.querySelectorAll('.teacher-select').forEach(select => {
+            select.innerHTML = '<option value="">--Izvēlēties--</option>';
+            skolotaji.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v; opt.textContent = v;
+                select.appendChild(opt);
+            });
+            select.addEventListener('change', updateAll);
+        });
+
+        document.querySelectorAll('.save-note').forEach(n => n.addEventListener('input', updateAll));
+        document.getElementById('year-select').addEventListener('change', updateAll);
+        document.getElementById('semester-select').addEventListener('change', updateAll);
 
         const autoSave = JSON.parse(localStorage.getItem('skolasPlans_autosave'));
         if (autoSave) {
@@ -153,55 +158,34 @@
                 if (el) el.value = autoSave[id];
             });
         }
+        
         atjaunotArhivaSarakstu();
-        updateAll(false);
+        document.getElementById('status').textContent = "✅ Gatavs darbam";
     }
 
-    function updateAll(trackChange = true) {
-        if(trackChange) isChanged = true;
+    function updateAll() {
         const currentState = {};
-        
-        // Saglabājam gada un semestra vērtības
-        currentState['year-select'] = document.getElementById('year-select').value;
-        currentState['semester-select'] = document.getElementById('semester-select').value;
-
-        dienas.forEach((diena, rIdx) => {
-            const rowSelects = document.querySelectorAll(`select[id^="s-${rIdx}-"]`);
-            const picked = Array.from(rowSelects).map(s => s.value).filter(v => v !== "");
-            
-            rowSelects.forEach(select => {
-                const val = select.value;
-                currentState[select.id] = val;
-                select.innerHTML = '<option value="">--Izvēlēties--</option>';
-                skolotaji.forEach(v => {
-                    if (!picked.includes(v) || v === val) {
-                        const opt = document.createElement('option');
-                        opt.value = v; opt.textContent = v;
-                        if (v === val) opt.selected = true;
-                        select.appendChild(opt);
-                    }
-                });
-            });
+        document.querySelectorAll('select, .save-note').forEach(el => {
+            if(el.id) currentState[el.id] = el.value;
         });
-
-        document.querySelectorAll('.save-note').forEach(n => currentState[n.id] = n.value);
         localStorage.setItem('skolasPlans_autosave', JSON.stringify(currentState));
         document.getElementById('status').textContent = "✅ Saglabāts: " + new Date().toLocaleTimeString();
     }
 
     function saglabatArhiva() {
-        const selects = Array.from(document.querySelectorAll('.teacher-select'));
-        if (selects.some(s => s.value === "")) {
-            alert("Lūdzu, aizpildiet visus dežūru punktus!");
-            return;
-        }
         const nosaukums = prompt("Versijas nosaukums:");
         if (!nosaukums) return;
+        
         let arhivs = JSON.parse(localStorage.getItem('skolasPlans_Arhivs')) || {};
-        arhivs[nosaukums] = JSON.parse(localStorage.getItem('skolasPlans_autosave'));
+        const currentState = {};
+        document.querySelectorAll('select, .save-note').forEach(el => {
+            if(el.id) currentState[el.id] = el.value;
+        });
+        
+        arhivs[nosaukums] = currentState;
         localStorage.setItem('skolasPlans_Arhivs', JSON.stringify(arhivs));
-        isChanged = false;
         atjaunotArhivaSarakstu();
+        document.getElementById('status').textContent = "💾 Versija '" + nosaukums + "' saglabāta!";
     }
 
     function atjaunotArhivaSarakstu() {
@@ -216,45 +200,35 @@
     }
 
     document.getElementById('archive-select').addEventListener('change', (e) => {
-        if (e.target.value === 'current') { 
-            const autoSave = JSON.parse(localStorage.getItem('skolasPlans_autosave'));
-            if (autoSave) {
-                Object.keys(autoSave).forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.value = autoSave[id];
-                });
-            }
-            updateAll(false);
-            return; 
+        const val = e.target.value;
+        let data;
+        if (val === 'current') {
+            data = JSON.parse(localStorage.getItem('skolasPlans_autosave'));
+        } else {
+            const arhivs = JSON.parse(localStorage.getItem('skolasPlans_Arhivs'));
+            data = arhivs[val];
         }
-        const data = JSON.parse(localStorage.getItem('skolasPlans_Arhivs'))[e.target.value];
+
         if (data) {
             Object.keys(data).forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.value = data[id];
             });
-            updateAll(false);
-            isChanged = false;
         }
     });
 
-    function iztiritPlanu() {
+    document.getElementById('clear-all-btn').onclick = function() {
         if (confirm("Vai tiešām notīrīt visu plānu?")) {
             document.querySelectorAll('.teacher-select').forEach(s => s.value = "");
             document.querySelectorAll('.save-note').forEach(n => n.value = "");
             localStorage.removeItem('skolasPlans_autosave');
-            updateAll(true);
             document.getElementById('status').textContent = "🗑️ Plāns notīrīts.";
         }
-    }
+    };
 
     function atvertSarakstu() {
         window.open(`https://docs.google.com/spreadsheets/d/${sheetId}/edit`, '_blank');
     }
-
-    window.addEventListener('beforeunload', (e) => {
-        if (isChanged) { e.preventDefault(); e.returnValue = ''; }
-    });
 
     window.onload = ieladetSkolotajus;
 </script>
