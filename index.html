@@ -190,7 +190,8 @@
 
     function atjaunotArhivaSarakstu() {
         const sel = document.getElementById('archive-select');
-        const arhivs = JSON.parse(localStorage.getItem('skolasPlans_Arhivs')) || {};
+        if (!sel) return;
+        let arhivs = JSON.parse(localStorage.getItem('skolasPlans_Arhivs')) || {};
         sel.innerHTML = '<option value="current">-- Pašreizējais darbs --</option>';
         Object.keys(arhivs).forEach(k => {
             const opt = document.createElement('option');
@@ -208,7 +209,6 @@
             const arhivs = JSON.parse(localStorage.getItem('skolasPlans_Arhivs'));
             data = arhivs[val];
         }
-
         if (data) {
             Object.keys(data).forEach(id => {
                 const el = document.getElementById(id);
@@ -217,14 +217,20 @@
         }
     });
 
-    document.getElementById('clear-all-btn').onclick = function() {
-        if (confirm("Vai tiešām notīrīt visu plānu?")) {
-            document.querySelectorAll('.teacher-select').forEach(s => s.value = "");
-            document.querySelectorAll('.save-note').forEach(n => n.value = "");
-            localStorage.removeItem('skolasPlans_autosave');
-            document.getElementById('status').textContent = "🗑️ Plāns notīrīts.";
+    document.addEventListener('DOMContentLoaded', () => {
+        const clearBtn = document.getElementById('clear-all-btn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (confirm("Vai tiešām notīrīt visu plānu?")) {
+                    document.querySelectorAll('.teacher-select').forEach(s => s.value = "");
+                    document.querySelectorAll('.save-note').forEach(n => n.value = "");
+                    localStorage.removeItem('skolasPlans_autosave');
+                    document.getElementById('status').textContent = "🗑️ Plāns notīrīts.";
+                }
+            });
         }
-    };
+    });
 
     function atvertSarakstu() {
         window.open(`https://docs.google.com/spreadsheets/d/${sheetId}/edit`, '_blank');
