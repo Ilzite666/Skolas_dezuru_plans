@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Skolotāju dežūru sistēma</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBT9m97QAAAABJRU5ErkJggg==">
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f4f7f6; color: #333; }
         .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 1200px; margin: auto; }
@@ -47,8 +48,8 @@
     <div class="header-inputs">
         <h1>Rīgas Pārdaugavas pamatskola</h1>
         <h2>Skolotāju dežūras 
-            <select id="year-select" style="width: 130px; font-size: 1.1rem;"></select> m.g. 
-            <select id="semester-select" style="font-size: 1.1rem;">
+            <select id="year-select" onchange="updateAll()" style="width: 130px; font-size: 1.1rem;"></select> m.g. 
+            <select id="semester-select" onchange="updateAll()" style="font-size: 1.1rem;">
                 <option>1. semestris</option>
                 <option>2. semestris</option>
             </select>
@@ -92,9 +93,9 @@
         <h3 style="color: #c0392b;">Pedagogu ievērībai!</h3>
         <ul style="list-style-type: disc; margin-left: 20px; line-height: 1.8;">
             <li>Dežūrējošais administrators novēro kārtību starpbrīžos pie ārdurvīm.</li>
-            <li>Pie mājturības kabinetiem: <input type="text" id="note-majture" class="save-note" placeholder="Ierakstiet skolotāju..."></li>
-            <li>Pie sporta zāles: <input type="text" id="note-sports" class="save-note" placeholder="Ierakstiet skolotājus..."></li>
-            <li>Kāpnes 3. un 4. stāvā: <input type="text" id="note-kapnes" class="save-note" placeholder="Vārdi un dienas..."></li>
+            <li>Pie mājturības kabinetiem: <input type="text" id="note-majture" class="save-note" oninput="updateAll()" placeholder="Ierakstiet skolotāju..."></li>
+            <li>Pie sporta zāles: <input type="text" id="note-sports" class="save-note" oninput="updateAll()" placeholder="Ierakstiet skolotājus..."></li>
+            <li>Kāpnes 3. un 4. stāvā: <input type="text" id="note-kapnes" class="save-note" oninput="updateAll()" placeholder="Vārdi un dienas..."></li>
         </ul>
     </div>
 </div>
@@ -124,6 +125,7 @@
     function init() {
         const yearSel = document.getElementById('year-select');
         const curYear = new Date().getFullYear();
+        yearSel.innerHTML = ""; // Nodrošina, ka saraksts nepieaug dubultā
         for(let i=-1; i<3; i++) {
             let y = curYear + i;
             let opt = document.createElement('option');
@@ -158,9 +160,15 @@
     function updateAll(trackChange = true) {
         if(trackChange) isChanged = true;
         const currentState = {};
+        
+        // Saglabājam gada un semestra vērtības
+        currentState['year-select'] = document.getElementById('year-select').value;
+        currentState['semester-select'] = document.getElementById('semester-select').value;
+
         dienas.forEach((diena, rIdx) => {
             const rowSelects = document.querySelectorAll(`select[id^="s-${rIdx}-"]`);
             const picked = Array.from(rowSelects).map(s => s.value).filter(v => v !== "");
+            
             rowSelects.forEach(select => {
                 const val = select.value;
                 currentState[select.id] = val;
@@ -175,9 +183,8 @@
                 });
             });
         });
+
         document.querySelectorAll('.save-note').forEach(n => currentState[n.id] = n.value);
-        currentState['year-select'] = document.getElementById('year-select').value;
-        currentState['semester-select'] = document.getElementById('semester-select').value;
         localStorage.setItem('skolasPlans_autosave', JSON.stringify(currentState));
         document.getElementById('status').textContent = "✅ Saglabāts: " + new Date().toLocaleTimeString();
     }
@@ -209,21 +216,35 @@
     }
 
     document.getElementById('archive-select').addEventListener('change', (e) => {
-        if (e.target.value === 'current') { location.reload(); return; }
+        if (e.target.value === 'current') { 
+            const autoSave = JSON.parse(localStorage.getItem('skolasPlans_autosave'));
+            if (autoSave) {
+                Object.keys(autoSave).forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = autoSave[id];
+                });
+            }
+            updateAll(false);
+            return; 
+        }
         const data = JSON.parse(localStorage.getItem('skolasPlans_Arhivs'))[e.target.value];
-        Object.keys(data).forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.value = data[id];
-        });
-        updateAll(false);
-        isChanged = false;
+        if (data) {
+            Object.keys(data).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = data[id];
+            });
+            updateAll(false);
+            isChanged = false;
+        }
     });
 
     function iztiritPlanu() {
-        if (confirm("Notīrīt visu?")) {
+        if (confirm("Vai tiešām notīrīt visu plānu?")) {
             document.querySelectorAll('.teacher-select').forEach(s => s.value = "");
             document.querySelectorAll('.save-note').forEach(n => n.value = "");
-            updateAll();
+            localStorage.removeItem('skolasPlans_autosave');
+            updateAll(true);
+            document.getElementById('status').textContent = "🗑️ Plāns notīrīts.";
         }
     }
 
